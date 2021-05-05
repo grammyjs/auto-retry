@@ -1,0 +1,32 @@
+{
+    "name": "@grammyjs/auto-retry",
+    "version": "0.1.0",
+    "description": "grammY API transformer function to retry requests",
+    "main": "out/index.js",
+    "scripts": {
+        "build": "tsc",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/grammyjs/auto-retry.git"
+    },
+    "files": [
+        "out/"
+    ],
+    "keywords": [
+        "retry",
+        "bot",
+        "transformer",
+        "grammy"
+    ],
+    "author": "KnorpelSenf",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/grammyjs/auto-retry/issues"
+    },
+    "homepage": "https://grammy.dev/plugins/auto-retry.html",
+    "devDependencies": {
+        "typescript": "^4.2.4"
+    }
+}
