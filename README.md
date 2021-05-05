@@ -15,5 +15,12 @@ import { autoRetry } from '@grammyjs/auto-retry'
 bot.api.config.use(autoRetry())
 ```
 
-You may pass an options object that specifies a maximum number of retries, or a threshold for a maximal time to wait.
+You may pass an options object that specifies a maximum number of retries (`maxRetryAttempts`, default: 3), or a threshold for a maximal time to wait (`maxDelaySeconds`, default: 1 hour).
 Other errors will be passed on, so the request will fail.
+
+```ts
+autoRetry({
+    maxRetryAttempts: 1,
+    maxDelaySeconds: 5,
+})
+```
