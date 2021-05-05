@@ -1,6 +1,6 @@
 {
     "name": "@grammyjs/auto-retry",
-    "version": "0.1.1",
+    "version": "1.0.0",
     "description": "grammY API transformer function to retry requests",
     "main": "out/index.js",
     "scripts": {
