@@ -36,7 +36,8 @@ export interface AutoRetryOptions {
      * Requests to the Telegram servers can sometimes encounter a gateway
      * timeout error (504). According to the MDN Web Docs, a 504 error is
      * usually not something you can fix, but requires a fix by the web server
-     * or the proxies you are trying to get access through.
+     * or the proxies you are trying to get access through. Set this option to
+     * `true` if the plugin should also retry these error automatically.
      *
      * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504)
      */
