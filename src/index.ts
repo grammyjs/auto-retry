@@ -32,6 +32,15 @@ export interface AutoRetryOptions {
      * The default value is 3 times.
      */
     maxRetryAttempts: number
+    /**
+     * Requests to the Telegram servers can sometimes encounter a gateway
+     * timeout error (504). According to the MDN Web Docs, a 504 error is
+     * usually not something you can fix, but requires a fix by the web server
+     * or the proxies you are trying to get access through.
+     *
+     * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504)
+     */
+    retryOnGatewayTimeouts: boolean
 }
 
 /**
@@ -46,16 +55,21 @@ export interface AutoRetryOptions {
  * @param options Configuration options
  * @returns The created API transformer function
  */
-export function autoRetry(options?: AutoRetryOptions): AutoRetryTransformer {
+export function autoRetry(
+    options?: Partial<AutoRetryOptions>
+): AutoRetryTransformer {
     const maxDelay = options?.maxDelaySeconds ?? 3600
     const maxRetries = options?.maxRetryAttempts ?? 3
+    const retryOnGatewayTimeouts = options?.retryOnGatewayTimeouts ?? false
     return async (prev, method, payload) => {
         let remainingAttempts = maxRetries
         let result = await prev(method, payload)
         while (
             !result.ok &&
-            typeof result.parameters?.retry_after === 'number' &&
-            result.parameters.retry_after <= maxDelay &&
+            ((typeof result.parameters?.retry_after === 'number' &&
+                result.parameters.retry_after <= maxDelay) ||
+                (result.error_code === 504 &&
+                    retryOnGatewayTimeouts === true)) &&
             remainingAttempts-- > 0
         ) {
             await pause(result.parameters.retry_after)
