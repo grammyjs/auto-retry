@@ -64,9 +64,9 @@ export function autoRetry(
     const maxRetries = options?.maxRetryAttempts ?? 3
     const retryOnInternalServerErrors =
         options?.retryOnInternalServerErrors ?? false
-    return async (prev, method, payload) => {
+    return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
-        let result = await prev(method, payload)
+        let result = await prev(method, payload, signal)
         while (
             !result.ok &&
             ((typeof result.parameters?.retry_after === 'number' &&
@@ -75,7 +75,7 @@ export function autoRetry(
             remainingAttempts-- > 0
         ) {
             await pause(result.parameters.retry_after)
-            result = await prev(method, payload)
+            result = await prev(method, payload, signal)
         }
         return result
     }
