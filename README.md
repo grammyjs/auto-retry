@@ -24,3 +24,5 @@ autoRetry({
     maxDelaySeconds: 5,
 })
 ```
+
+You can use `retryOnInternalServerErrors` to automatically retry all other internal server errors by Telegram (status code >= 500).
