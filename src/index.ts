@@ -40,7 +40,7 @@ export interface AutoRetryOptions {
      * connection that is temporarily unreliable. Set this option to `true` if
      * the plugin should also retry these error automatically.
      *
-     * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504)
+     * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
      */
     retryOnInternalServerErrors: boolean
 }
