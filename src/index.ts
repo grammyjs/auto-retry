@@ -33,15 +33,16 @@ export interface AutoRetryOptions {
      */
     maxRetryAttempts: number
     /**
-     * Requests to the Telegram servers can sometimes encounter a gateway
-     * timeout error (504). According to the MDN Web Docs, a 504 error is
-     * usually not something you can fix, but requires a fix by the web server
-     * or the proxies you are trying to get access through. Set this option to
-     * `true` if the plugin should also retry these error automatically.
+     * Requests to the Telegram servers can sometimes encounter internal server
+     * errors (error with status code >= 500). Those are usually not something
+     * you can fix, but requires a fix by the web server or the proxies you are
+     * trying to get access through. Sometimes, it can also just be an network
+     * connection that is temporarily unreliable. Set this option to `true` if
+     * the plugin should also retry these error automatically.
      *
      * (https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/504)
      */
-    retryOnGatewayTimeouts: boolean
+    retryOnInternalServerErrors: boolean
 }
 
 /**
@@ -61,20 +62,20 @@ export function autoRetry(
 ): AutoRetryTransformer {
     const maxDelay = options?.maxDelaySeconds ?? 3600
     const maxRetries = options?.maxRetryAttempts ?? 3
-    const retryOnGatewayTimeouts = options?.retryOnGatewayTimeouts ?? false
-    return async (prev, method, payload) => {
+    const retryOnInternalServerErrors =
+        options?.retryOnInternalServerErrors ?? false
+    return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
-        let result = await prev(method, payload)
+        let result = await prev(method, payload, signal)
         while (
             !result.ok &&
             ((typeof result.parameters?.retry_after === 'number' &&
                 result.parameters.retry_after <= maxDelay) ||
-                (result.error_code === 504 &&
-                    retryOnGatewayTimeouts === true)) &&
+                (result.error_code >= 500 && retryOnInternalServerErrors)) &&
             remainingAttempts-- > 0
         ) {
             await pause(result.parameters.retry_after)
-            result = await prev(method, payload)
+            result = await prev(method, payload, signal)
         }
         return result
     }
