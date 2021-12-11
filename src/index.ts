@@ -67,15 +67,22 @@ export function autoRetry(
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
         let result = await prev(method, payload, signal)
-        while (
-            !result.ok &&
-            ((typeof result.parameters?.retry_after === 'number' &&
-                result.parameters.retry_after <= maxDelay) ||
-                (result.error_code >= 500 && retryOnInternalServerErrors)) &&
-            remainingAttempts-- > 0
-        ) {
-            await pause(result.parameters.retry_after)
-            result = await prev(method, payload, signal)
+        while (!result.ok && remainingAttempts-- > 0) {
+            let retry = false
+            if (
+                typeof result.parameters?.retry_after === 'number' &&
+                result.parameters.retry_after <= maxDelay
+            ) {
+                await pause(result.parameters.retry_after)
+                retry = true
+            } else if (
+                result.error_code >= 500 &&
+                retryOnInternalServerErrors
+            ) {
+                retry = true
+            }
+            if (!retry) return result
+            else result = await prev(method, payload, signal)
         }
         return result
     }
