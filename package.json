@@ -37,5 +37,8 @@
         "rate",
         "flood",
         "limit"
-    ]
+    ],
+    "dependencies": {
+        "grammy": "^1.12.0"
+    }
 }

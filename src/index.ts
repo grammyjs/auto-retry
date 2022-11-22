@@ -1,8 +1,8 @@
+import { Transformer } from "grammy";
+
 function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
 }
-
-type AutoRetryTransformer = (...args: any[]) => any
 
 /**
  * Options that can be specified when creating an auto retry transformer
@@ -59,11 +59,12 @@ export interface AutoRetryOptions {
  */
 export function autoRetry(
     options?: Partial<AutoRetryOptions>
-): AutoRetryTransformer {
+): Transformer {
     const maxDelay = options?.maxDelaySeconds ?? 3600
     const maxRetries = options?.maxRetryAttempts ?? 3
     const retryOnInternalServerErrors =
         options?.retryOnInternalServerErrors ?? false
+
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
         let result = await prev(method, payload, signal)
