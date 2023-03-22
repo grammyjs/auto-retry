@@ -82,7 +82,8 @@ export function autoRetry(
                 result.parameters.retry_after <= maxDelay
             ) {
                 if (logging === true) {
-                    console.log(`Retry after ${result.parameters.retry_after} seconds`);
+                    const timeString = new Date().toLocaleString();
+                    console.log(`[${timeString}] Retrying after ${result.parameters.retry_after} seconds`);
                 }
                 await pause(result.parameters.retry_after)
                 retry = true
