@@ -1,3 +1,6 @@
+import { debug as d } from "debug";
+const debug = d("auto-retry");
+
 function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
 }
@@ -43,13 +46,6 @@ export interface AutoRetryOptions {
      * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
      */
     retryOnInternalServerErrors: boolean
-    /**
-      * A boolean that determines whether the plugin should log message
-      * to the console when a `retry_after` parameter is encountered in
-      * a failed response. If `true`, the plugin will log a message in the format
-      * "Retry after X seconds". The default value is `false`.
-     */
-    logging: boolean;
 }
 
 /**
@@ -71,7 +67,6 @@ export function autoRetry(
     const maxRetries = options?.maxRetryAttempts ?? 3
     const retryOnInternalServerErrors =
         options?.retryOnInternalServerErrors ?? false
-    const logging = options?.logging ?? false
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
         let result = await prev(method, payload, signal)
@@ -81,10 +76,8 @@ export function autoRetry(
                 typeof result.parameters?.retry_after === 'number' &&
                 result.parameters.retry_after <= maxDelay
             ) {
-                if (logging === true) {
-                    const timeString = new Date().toLocaleString();
-                    console.log(`[${timeString}] Retrying after ${result.parameters.retry_after} seconds`);
-                }
+                const timeString = new Date().toLocaleString();
+                debug(`[${timeString}] Retrying ${method} after ${result.parameters.retry_after} seconds`);
                 await pause(result.parameters.retry_after)
                 retry = true
             } else if (
