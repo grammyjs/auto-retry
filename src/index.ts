@@ -76,8 +76,7 @@ export function autoRetry(
                 typeof result.parameters?.retry_after === 'number' &&
                 result.parameters.retry_after <= maxDelay
             ) {
-                const timeString = new Date().toLocaleString();
-                debug(`[${timeString}] Retrying ${method} after ${result.parameters.retry_after} seconds`);
+                debug(`Will retry ${method} after ${result.parameters.retry_after} seconds`);
                 await pause(result.parameters.retry_after)
                 retry = true
             } else if (
