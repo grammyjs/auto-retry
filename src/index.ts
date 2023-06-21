@@ -2,6 +2,9 @@ function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
 }
 
+const DEFAULT_SESSION_KEY = "default";
+const waitUntils = new Map<string, number>();
+
 type AutoRetryTransformer = (...args: any[]) => any
 
 /**
@@ -43,6 +46,16 @@ export interface AutoRetryOptions {
      * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
      */
     retryOnInternalServerErrors: boolean
+    /**
+     * All network requests that are sent out from the same session should pause
+     * if one of the request receives a 429 response from Telegram.
+     *
+     * Note: Session, for transformers, are from the Bot's perspective to
+     * Telegram. This is unlike middlewware sessions, which are from user
+     * to Bot's perspective.
+     *
+     */
+    sessionKey: string
 }
 
 /**
@@ -64,16 +77,20 @@ export function autoRetry(
     const maxRetries = options?.maxRetryAttempts ?? 3
     const retryOnInternalServerErrors =
         options?.retryOnInternalServerErrors ?? false
+    const sessionKey = options?.sessionKey ?? DEFAULT_SESSION_KEY;
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries
-        let result = await prev(method, payload, signal)
-        while (!result.ok && remainingAttempts-- > 0) {
+        let result: ReturnType<typeof prev> = { ok: false }
+        while (!result.ok && remainingAttempts-- >= 0) {
             let retry = false
-            if (
-                typeof result.parameters?.retry_after === 'number' &&
-                result.parameters.retry_after <= maxDelay
-            ) {
-                await pause(result.parameters.retry_after)
+            const nowSeconds = Math.trunc(Date.now() / 1000)
+            if (typeof result.parameters?.retry_after === 'number') {
+                waitUntils.set(sessionKey, nowSeconds + result.parameters.retry_after)
+            }
+
+            const retryAfter = Math.max((waitUntils.get(sessionKey) ?? 0) - nowSeconds, 0);
+            if (retryAfter <= maxDelay) {
+                await pause(retryAfter)
                 retry = true
             } else if (
                 result.error_code >= 500 &&
