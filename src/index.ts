@@ -2,7 +2,12 @@ function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
 }
 
-const DEFAULT_SESSION_KEY = "default";
+/**
+ * The default assumption is that auto-retry transformer object
+ * isn't shared by multuple bots, and we share delays on a
+ * per-method basis
+ */
+const DEFAULT_WAIT_KEY = (method: string) => method;
 const waitUntils = new Map<string, number>();
 
 type AutoRetryTransformer = (...args: any[]) => any
@@ -47,15 +52,12 @@ export interface AutoRetryOptions {
      */
     retryOnInternalServerErrors: boolean
     /**
-     * All network requests that are sent out from the same session should pause
+     * All method that are sent out from the same waitKey should pause
      * if one of the request receives a 429 response from Telegram.
-     *
-     * Note: Session, for transformers, are from the Bot's perspective to
-     * Telegram. This is unlike middlewware sessions, which are from user
-     * to Bot's perspective.
-     *
+     * 
+     * The default value is per-method basis only
      */
-    sessionKey: string
+    waitKey: (method: string, payload: any) => string;
 }
 
 /**
@@ -77,18 +79,19 @@ export function autoRetry(
     const maxRetries = options?.maxRetryAttempts ?? 3
     const retryOnInternalServerErrors =
         options?.retryOnInternalServerErrors ?? false
-    const sessionKey = options?.sessionKey ?? DEFAULT_SESSION_KEY;
+    const waitKey = options?.waitKey ?? DEFAULT_WAIT_KEY;
     return async (prev, method, payload, signal) => {
+        const currentWaitKey = waitKey(method, payload);
         let remainingAttempts = maxRetries
         let result: ReturnType<typeof prev> = { ok: false }
         while (!result.ok && remainingAttempts-- >= 0) {
             let retry = false
             const nowSeconds = Math.trunc(Date.now() / 1000)
             if (typeof result.parameters?.retry_after === 'number') {
-                waitUntils.set(sessionKey, nowSeconds + result.parameters.retry_after)
+                waitUntils.set(currentWaitKey, nowSeconds + result.parameters.retry_after)
             }
 
-            const retryAfter = Math.max((waitUntils.get(sessionKey) ?? 0) - nowSeconds, 0);
+            const retryAfter = Math.max((waitUntils.get(currentWaitKey) ?? 0) - nowSeconds, 0);
             if (retryAfter <= maxDelay) {
                 await pause(retryAfter)
                 retry = true
