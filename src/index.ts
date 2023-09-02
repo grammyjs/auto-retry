@@ -36,7 +36,7 @@ export interface AutoRetryOptions {
      * Requests to the Telegram servers can sometimes encounter internal server
      * errors (error with status code >= 500). Those are usually not something
      * you can fix, but requires a fix by the web server or the proxies you are
-     * trying to get access through. Sometimes, it can also just be an network
+     * trying to get access through. Sometimes, it can also just be a network
      * connection that is temporarily unreliable. Set this option to `true` if
      * the plugin should also retry these error automatically.
      *
