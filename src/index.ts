@@ -1,5 +1,5 @@
 import { debug as d } from "debug";
-const debug = d("auto-retry");
+const debug = d("grammy:auto-retry");
 
 function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
