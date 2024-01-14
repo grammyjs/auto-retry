@@ -76,7 +76,7 @@ export function autoRetry(
                 typeof result.parameters?.retry_after === 'number' &&
                 result.parameters.retry_after <= maxDelay
             ) {
-                debug(`Will retry ${method} after ${result.parameters.retry_after} seconds`);
+                debug(`Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`);
                 await pause(result.parameters.retry_after)
                 retry = true
             } else if (
