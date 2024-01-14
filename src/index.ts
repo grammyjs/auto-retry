@@ -1,3 +1,6 @@
+import { debug as d } from "debug";
+const debug = d("grammy:auto-retry");
+
 function pause(seconds: number) {
     return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
 }
@@ -73,6 +76,7 @@ export function autoRetry(
                 typeof result.parameters?.retry_after === 'number' &&
                 result.parameters.retry_after <= maxDelay
             ) {
+                debug(`Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`);
                 await pause(result.parameters.retry_after)
                 retry = true
             } else if (
