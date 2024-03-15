@@ -1,11 +1,11 @@
-import { debug as d } from "debug";
+import { debug as d } from "./platform.deno.ts";
 const debug = d("grammy:auto-retry");
 
 function pause(seconds: number) {
-    return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
+    return new Promise((resolve) => setTimeout(resolve, 1000 * seconds));
 }
 
-type AutoRetryTransformer = (...args: any[]) => any
+type AutoRetryTransformer = (...args: any[]) => any;
 
 /**
  * Options that can be specified when creating an auto retry transformer
@@ -23,7 +23,7 @@ export interface AutoRetryOptions {
      *
      * The default value is one hour (3600 seconds).
      */
-    maxDelaySeconds: number
+    maxDelaySeconds: number;
     /**
      * Determines the maximum number of times that an API request should be
      * retried. If the request has been retried the specified number of times
@@ -34,7 +34,7 @@ export interface AutoRetryOptions {
      *
      * The default value is 3 times.
      */
-    maxRetryAttempts: number
+    maxRetryAttempts: number;
     /**
      * Requests to the Telegram servers can sometimes encounter internal server
      * errors (error with status code >= 500). Those are usually not something
@@ -45,7 +45,7 @@ export interface AutoRetryOptions {
      *
      * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
      */
-    retryOnInternalServerErrors: boolean
+    retryOnInternalServerErrors: boolean;
 }
 
 /**
@@ -61,33 +61,35 @@ export interface AutoRetryOptions {
  * @returns The created API transformer function
  */
 export function autoRetry(
-    options?: Partial<AutoRetryOptions>
+    options?: Partial<AutoRetryOptions>,
 ): AutoRetryTransformer {
-    const maxDelay = options?.maxDelaySeconds ?? 3600
-    const maxRetries = options?.maxRetryAttempts ?? 3
-    const retryOnInternalServerErrors =
-        options?.retryOnInternalServerErrors ?? false
+    const maxDelay = options?.maxDelaySeconds ?? 3600;
+    const maxRetries = options?.maxRetryAttempts ?? 3;
+    const retryOnInternalServerErrors = options?.retryOnInternalServerErrors ??
+        false;
     return async (prev, method, payload, signal) => {
-        let remainingAttempts = maxRetries
-        let result = await prev(method, payload, signal)
+        let remainingAttempts = maxRetries;
+        let result = await prev(method, payload, signal);
         while (!result.ok && remainingAttempts-- > 0) {
-            let retry = false
+            let retry = false;
             if (
-                typeof result.parameters?.retry_after === 'number' &&
+                typeof result.parameters?.retry_after === "number" &&
                 result.parameters.retry_after <= maxDelay
             ) {
-                debug(`Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`);
-                await pause(result.parameters.retry_after)
-                retry = true
+                debug(
+                    `Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`,
+                );
+                await pause(result.parameters.retry_after);
+                retry = true;
             } else if (
                 result.error_code >= 500 &&
                 retryOnInternalServerErrors
             ) {
-                retry = true
+                retry = true;
             }
-            if (!retry) return result
-            else result = await prev(method, payload, signal)
+            if (!retry) return result;
+            else result = await prev(method, payload, signal);
         }
-        return result
-    }
+        return result;
+    };
 }

@@ -16,7 +16,8 @@
         "url": "https://github.com/grammyjs/auto-retry/issues"
     },
     "scripts": {
-        "build": "tsc"
+        "build": "tsc",
+        "prepare": "npm run build"
     },
     "dependencies": {
         "debug": "^4.3.4"
@@ -28,10 +29,10 @@
     "files": [
         "out/"
     ],
-    "main": "out/index.js",
+    "main": "out/mod.js",
     "type": "commonjs",
     "exports": {
-        ".": "./out/index.js"
+        ".": "./out/mod.js"
     },
     "keywords": [
         "retry",
