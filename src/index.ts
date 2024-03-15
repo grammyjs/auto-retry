@@ -2,50 +2,51 @@ import { debug as d } from "debug";
 const debug = d("grammy:auto-retry");
 
 function pause(seconds: number) {
-    return new Promise(resolve => setTimeout(resolve, 1000 * seconds))
+  return new Promise((resolve) => setTimeout(resolve, 1000 * seconds));
 }
 
-type AutoRetryTransformer = (...args: any[]) => any
+type AutoRetryTransformer = (...args: any[]) => any;
 
 /**
  * Options that can be specified when creating an auto retry transformer
  * function.
  */
 export interface AutoRetryOptions {
-    /**
-     * Determines the maximum number of seconds that should be regarded from the
-     * `retry_after` parameter. If the `retry_after` value exceeds this
-     * threshold, the error will be passed on, hence failing the request. For
-     * instance, this is useful if you don't want your bot to retry sending
-     * messages that are too old.
-     *
-     * Set this value to `Infinity` to disable the threshold.
-     *
-     * The default value is one hour (3600 seconds).
-     */
-    maxDelaySeconds: number
-    /**
-     * Determines the maximum number of times that an API request should be
-     * retried. If the request has been retried the specified number of times
-     * but still fails, the error will be rethrown, eventually failing the
-     * request.
-     *
-     * Set this value to `Infinity` to disable the threshold.
-     *
-     * The default value is 3 times.
-     */
-    maxRetryAttempts: number
-    /**
-     * Requests to the Telegram servers can sometimes encounter internal server
-     * errors (error with status code >= 500). Those are usually not something
-     * you can fix, but requires a fix by the web server or the proxies you are
-     * trying to get access through. Sometimes, it can also just be a network
-     * connection that is temporarily unreliable. Set this option to `true` if
-     * the plugin should also retry these error automatically.
-     *
-     * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
-     */
-    retryOnInternalServerErrors: boolean
+  /**
+   * Determines the maximum number of seconds that should be regarded from the
+   * `retry_after` parameter. If the `retry_after` value exceeds this
+   * threshold, the error will be passed on, hence failing the request. For
+   * instance, this is useful if you don't want your bot to retry sending
+   * messages that are too old.
+   *
+   * The default value is `Infinity`. This means that the threshold is
+   * disabled. The plugin will wait any number of seconds.
+   */
+  maxDelaySeconds: number;
+  /**
+   * Determines the maximum number of times that an API request should be
+   * retried. If the request has been retried the specified number of times
+   * but still fails, the error will be rethrown, eventually failing the
+   * request.
+   *
+   * The default value is `Infinity`. This means that the threshold is
+   * disabled. The plugin will attempt to retry requests indefinitely.
+   */
+  maxRetryAttempts: number;
+  /**
+   * Requests to the Telegram servers can sometimes encounter internal server
+   * errors (error with status code >= 500). Those are usually not something you
+   * can fix. They often are temporary networking issues, but even if they
+   * persist, they require a fix by the web server or any potential proxies. It
+   * is therefore the best strategy to retry such errors automatically, which is
+   * what this plugin does by default.
+   *
+   * Set this option to `true` if the plugin should rethrow internal server
+   * errors rather than retrying them automatically.
+   *
+   * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
+   */
+  rethrowInternalServerErrors: boolean;
 }
 
 /**
@@ -61,33 +62,35 @@ export interface AutoRetryOptions {
  * @returns The created API transformer function
  */
 export function autoRetry(
-    options?: Partial<AutoRetryOptions>
+  options?: Partial<AutoRetryOptions>,
 ): AutoRetryTransformer {
-    const maxDelay = options?.maxDelaySeconds ?? 3600
-    const maxRetries = options?.maxRetryAttempts ?? 3
-    const retryOnInternalServerErrors =
-        options?.retryOnInternalServerErrors ?? false
-    return async (prev, method, payload, signal) => {
-        let remainingAttempts = maxRetries
-        let result = await prev(method, payload, signal)
-        while (!result.ok && remainingAttempts-- > 0) {
-            let retry = false
-            if (
-                typeof result.parameters?.retry_after === 'number' &&
-                result.parameters.retry_after <= maxDelay
-            ) {
-                debug(`Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`);
-                await pause(result.parameters.retry_after)
-                retry = true
-            } else if (
-                result.error_code >= 500 &&
-                retryOnInternalServerErrors
-            ) {
-                retry = true
-            }
-            if (!retry) return result
-            else result = await prev(method, payload, signal)
-        }
-        return result
+  const maxDelay = options?.maxDelaySeconds ?? Infinity;
+  const maxRetries = options?.maxRetryAttempts ?? Infinity;
+  const rethrowInternalServerErrors = options?.rethrowInternalServerErrors ??
+    false;
+  return async (prev, method, payload, signal) => {
+    let remainingAttempts = maxRetries;
+    let result = await prev(method, payload, signal);
+    while (!result.ok && remainingAttempts-- > 0) {
+      let retry = false;
+      if (
+        typeof result.parameters?.retry_after === "number" &&
+        result.parameters.retry_after <= maxDelay
+      ) {
+        debug(
+          `Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`,
+        );
+        await pause(result.parameters.retry_after);
+        retry = true;
+      } else if (
+        result.error_code >= 500 &&
+        !rethrowInternalServerErrors
+      ) {
+        retry = true;
+      }
+      if (!retry) return result;
+      else result = await prev(method, payload, signal);
     }
+    return result;
+  };
 }
