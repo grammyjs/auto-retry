@@ -1,4 +1,4 @@
-import { debug as d } from "debug";
+import { debug as d } from "./platform.deno.ts";
 const debug = d("grammy:auto-retry");
 
 function pause(seconds: number) {
