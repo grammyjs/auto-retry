@@ -1,6 +1,9 @@
 import { debug as d } from "./platform.deno.ts";
 const debug = d("grammy:auto-retry");
 
+const ONE_HOUR = 60 * 60 * 1000; // ms
+const INITIAL_LAST_DELAY = 3000; // ms
+
 function pause(seconds: number) {
     return new Promise((resolve) => setTimeout(resolve, 1000 * seconds));
 }
@@ -19,9 +22,8 @@ export interface AutoRetryOptions {
      * instance, this is useful if you don't want your bot to retry sending
      * messages that are too old.
      *
-     * Set this value to `Infinity` to disable the threshold.
-     *
-     * The default value is one hour (3600 seconds).
+     * The default value is `Infinity`. This means that the threshold is
+     * disabled. The plugin will wait any number of seconds.
      */
     maxDelaySeconds: number;
     /**
@@ -30,22 +32,24 @@ export interface AutoRetryOptions {
      * but still fails, the error will be rethrown, eventually failing the
      * request.
      *
-     * Set this value to `Infinity` to disable the threshold.
-     *
-     * The default value is 3 times.
+     * The default value is `Infinity`. This means that the threshold is
+     * disabled. The plugin will attempt to retry requests indefinitely.
      */
     maxRetryAttempts: number;
     /**
      * Requests to the Telegram servers can sometimes encounter internal server
-     * errors (error with status code >= 500). Those are usually not something
-     * you can fix, but requires a fix by the web server or the proxies you are
-     * trying to get access through. Sometimes, it can also just be a network
-     * connection that is temporarily unreliable. Set this option to `true` if
-     * the plugin should also retry these error automatically.
+     * errors (error with status code >= 500). Those are usually not something you
+     * can fix. They often are temporary networking issues, but even if they
+     * persist, they require a fix by the web server or any potential proxies. It
+     * is therefore the best strategy to retry such errors automatically, which is
+     * what this plugin does by default.
+     *
+     * Set this option to `true` if the plugin should rethrow internal server
+     * errors rather than retrying them automatically.
      *
      * (https://en.m.wikipedia.org/wiki/List_of_HTTP_status_codes#5xx_server_errors)
      */
-    retryOnInternalServerErrors: boolean;
+    rethrowInternalServerErrors: boolean;
 }
 
 /**
@@ -63,13 +67,14 @@ export interface AutoRetryOptions {
 export function autoRetry(
     options?: Partial<AutoRetryOptions>,
 ): AutoRetryTransformer {
-    const maxDelay = options?.maxDelaySeconds ?? 3600;
-    const maxRetries = options?.maxRetryAttempts ?? 3;
-    const retryOnInternalServerErrors = options?.retryOnInternalServerErrors ??
+    const maxDelay = options?.maxDelaySeconds ?? Infinity;
+    const maxRetries = options?.maxRetryAttempts ?? Infinity;
+    const rethrowInternalServerErrors = options?.rethrowInternalServerErrors ??
         false;
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries;
         let result = await prev(method, payload, signal);
+        let lastDelay = INITIAL_LAST_DELAY;
         while (!result.ok && remainingAttempts-- > 0) {
             let retry = false;
             if (
@@ -80,11 +85,15 @@ export function autoRetry(
                     `Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`,
                 );
                 await pause(result.parameters.retry_after);
+                lastDelay = INITIAL_LAST_DELAY;
                 retry = true;
             } else if (
                 result.error_code >= 500 &&
-                retryOnInternalServerErrors
+                !rethrowInternalServerErrors
             ) {
+                await pause(lastDelay);
+                // exponential backoff, capped at one hour
+                lastDelay = Math.min(ONE_HOUR, lastDelay + lastDelay);
                 retry = true;
             }
             if (!retry) return result;
