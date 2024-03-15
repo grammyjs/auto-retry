@@ -16,22 +16,23 @@
         "url": "https://github.com/grammyjs/auto-retry/issues"
     },
     "scripts": {
-        "build": "tsc"
+        "build": "deno2node",
+        "prepare": "npm run build"
     },
     "dependencies": {
         "debug": "^4.3.4"
     },
     "devDependencies": {
-        "typescript": "^4.2.4",
-        "@types/debug": "^4.1.7"
+        "@types/debug": "^4.1.7",
+        "deno2node": "^1.11.0"
     },
     "files": [
         "out/"
     ],
-    "main": "out/index.js",
+    "main": "out/mod.js",
     "type": "commonjs",
     "exports": {
-        ".": "./out/index.js"
+        ".": "./out/mod.js"
     },
     "keywords": [
         "retry",
@@ -40,6 +41,7 @@
         "grammy",
         "rate",
         "flood",
-        "limit"
+        "limit",
+        "broadcast"
     ]
 }

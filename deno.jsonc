@@ -1,0 +1,11 @@
+{
+    "lock": false,
+    "fmt": {
+        "proseWrap": "preserve",
+        "indentWidth": 4
+    },
+    "exclude": [
+        "./out/",
+        "./node_modules/"
+    ]
+}
