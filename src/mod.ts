@@ -1,6 +1,9 @@
 import { debug as d } from "./platform.deno.ts";
 const debug = d("grammy:auto-retry");
 
+const ONE_HOUR = 60 * 60 * 1000; // ms
+const INITIAL_LAST_DELAY = 3000; // ms
+
 function pause(seconds: number) {
     return new Promise((resolve) => setTimeout(resolve, 1000 * seconds));
 }
@@ -71,6 +74,7 @@ export function autoRetry(
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries;
         let result = await prev(method, payload, signal);
+        let lastDelay = INITIAL_LAST_DELAY;
         while (!result.ok && remainingAttempts-- > 0) {
             let retry = false;
             if (
@@ -81,11 +85,15 @@ export function autoRetry(
                     `Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`,
                 );
                 await pause(result.parameters.retry_after);
+                lastDelay = INITIAL_LAST_DELAY;
                 retry = true;
             } else if (
                 result.error_code >= 500 &&
                 !rethrowInternalServerErrors
             ) {
+                await pause(lastDelay);
+                // exponential backoff, capped at one hour
+                lastDelay = Math.min(ONE_HOUR, lastDelay + lastDelay);
                 retry = true;
             }
             if (!retry) return result;
