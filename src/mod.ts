@@ -53,9 +53,9 @@ export interface AutoRetryOptions {
     /**
      * Requests to the Telegram servers can sometimes encounter internal server
      * errors (error with status code >= 500). Those are usually not something
-     * you can fix in your code. They often are temporary networking issues, but
-     * even if they persist, they require a fix by the web server or any
-     * potential proxies. It is therefore the best strategy to retry such errors
+     * you can fix in your code. They often are temporary issues, but even if
+     * they persist, they require a fix by the web server or any potential
+     * proxies. It is therefore the best strategy to retry such errors
      * automatically, which is what this plugin does by default.
      *
      * Set this option to `true` if the plugin should rethrow internal server
@@ -77,7 +77,7 @@ export interface AutoRetryOptions {
      * (`HttpError` instances) rather than retrying the respective requests
      * automatically.
      */
-    rethrowNetworkingErrors: boolean;
+    rethrowHttpErrors: boolean;
 }
 
 /**
@@ -97,7 +97,7 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
     const maxRetries = options?.maxRetryAttempts ?? Infinity;
     const rethrowInternalServerErrors = options?.rethrowInternalServerErrors ??
         false;
-    const rethrowNetworkingErrors = options?.rethrowNetworkingErrors ?? false;
+    const rethrowHttpErrors = options?.rethrowHttpErrors ?? false;
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries;
         let nextDelay = INITIAL_LAST_DELAY;
@@ -113,7 +113,7 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                 try {
                     res = await prev(method, payload, signal);
                 } catch (e) {
-                    if (!rethrowNetworkingErrors && e instanceof HttpError) {
+                    if (!rethrowHttpErrors && e instanceof HttpError) {
                         debug(
                             `HttpError thrown, will retry '${method}' after ${nextDelay} seconds (${e.message})`,
                         );
