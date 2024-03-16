@@ -10,3 +10,8 @@ if (typeof Deno !== "undefined") {
     if (namespace) debug.enable(namespace);
     else debug.disable();
 }
+
+export {
+    HttpError,
+    type Transformer,
+} from "https://lib.deno.dev/x/grammy@v1/mod.ts";
