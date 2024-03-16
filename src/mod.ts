@@ -6,13 +6,16 @@ const ONE_HOUR = 3600; // seconds
 const INITIAL_LAST_DELAY = 3; // seconds
 
 function pause(seconds: number, signal?: AbortSignal) {
-    return new Promise<void>((resolve) => {
-        const handle = setTimeout(done, 1000 * seconds);
-        signal?.addEventListener("abort", done);
-        function done() {
-            clearTimeout(handle);
-            signal?.removeEventListener("abort", done);
+    return new Promise<void>((resolve, reject) => {
+        const handle = setTimeout(() => {
+            signal?.removeEventListener("abort", abort);
             resolve();
+        }, 1000 * seconds);
+        signal?.addEventListener("abort", abort);
+        function abort() {
+            clearTimeout(handle);
+            signal?.removeEventListener("abort", abort);
+            reject(new Error("Request aborted while waiting between retries"));
         }
     });
 }
