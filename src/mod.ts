@@ -1,6 +1,10 @@
-import { debug as d } from "./platform.deno.ts";
+import {
+    type AbortSignal,
+    debug as d,
+    HttpError,
+    type Transformer,
+} from "./platform.deno.ts";
 const debug = d("grammy:auto-retry");
-import { HttpError, type Transformer } from "./platform.deno.ts";
 
 const ONE_HOUR = 3600; // seconds
 const INITIAL_LAST_DELAY = 3; // seconds
