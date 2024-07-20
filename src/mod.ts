@@ -113,7 +113,10 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                 try {
                     res = await prev(method, payload, signal);
                 } catch (e) {
-                    if (!rethrowHttpErrors && e instanceof HttpError) {
+                    if (
+                        (signal === undefined || !signal.aborted) &&
+                        !rethrowHttpErrors && e instanceof HttpError
+                    ) {
                         debug(
                             `HttpError thrown, will retry '${method}' after ${nextDelay} seconds (${e.message})`,
                         );
