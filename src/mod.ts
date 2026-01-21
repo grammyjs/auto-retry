@@ -78,6 +78,16 @@ export interface AutoRetryOptions {
      * automatically.
      */
     rethrowHttpErrors: boolean;
+    /**
+     * When a chat migrates from a group to a supergroup, any attempt to send a
+     * message to the old chat will error with `migrate_to_chat_id`. This plugin
+     * will automatically retry the request and substitute the `chat_id`
+     * parameter by the value received in the error message.
+     *
+     * Set this option to `true` if the plugin should rethrow chat migration
+     * errors rather than retrying the respective requests automatically.
+     */
+    rethrowChatMigrationErrors: boolean;
 }
 
 /**
@@ -98,6 +108,8 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
     const rethrowInternalServerErrors = options?.rethrowInternalServerErrors ??
         false;
     const rethrowHttpErrors = options?.rethrowHttpErrors ?? false;
+    const rethrowChatMigrationErrors = options?.rethrowChatMigrationErrors ??
+        false;
     return async (prev, method, payload, signal) => {
         let remainingAttempts = maxRetries;
         let nextDelay = INITIAL_LAST_DELAY;
@@ -143,6 +155,21 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                     `Hit rate limit, will retry '${method}' after ${result.parameters.retry_after} seconds`,
                 );
                 await pause(result.parameters.retry_after, signal);
+                nextDelay = INITIAL_LAST_DELAY;
+                retry = true;
+            } else if (
+                typeof result.parameters?.migrate_to_chat_id === "number" &&
+                typeof payload === "object" && payload !== null &&
+                "chat_id" in payload && typeof payload.chat_id === "number" &&
+                !rethrowChatMigrationErrors
+            ) {
+                debug(
+                    `Hit chat migration error from chat_id ${payload.chat_id} to ${result.parameters.migrate_to_chat_id}, will retry '${method}' immediately with new chat_id`,
+                );
+                payload = {
+                    ...payload,
+                    chat_id: result.parameters.migrate_to_chat_id,
+                };
                 nextDelay = INITIAL_LAST_DELAY;
                 retry = true;
             } else if (
