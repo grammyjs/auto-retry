@@ -125,6 +125,7 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                 try {
                     res = await prev(method, payload, signal);
                 } catch (e) {
+                    if (remainingAttempts-- <= 0) throw e;
                     if (
                         (signal === undefined || !signal.aborted) &&
                         !rethrowHttpErrors && e instanceof HttpError
@@ -146,6 +147,8 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
         do {
             let retry = false;
             result = await call();
+
+            if (remainingAttempts-- <= 0) return result;
 
             if (
                 typeof result.parameters?.retry_after === "number" &&
@@ -183,7 +186,6 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                 retry = true;
             }
             if (!retry) return result;
-        } while (!result.ok && remainingAttempts-- > 0);
-        return result;
+        } while (true);
     };
 }
