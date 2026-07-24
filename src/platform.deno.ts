@@ -14,6 +14,6 @@ if (typeof Deno !== "undefined") {
 export {
     HttpError,
     type Transformer,
-} from "https://lib.deno.dev/x/grammy@v1/mod.ts";
+} from "https://libdenodev.knightniwrem.deno.net/x/grammy@v1/mod.ts";
 
 export type AbortSignal = globalThis.AbortSignal;
