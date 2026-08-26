@@ -129,6 +129,10 @@ export function autoRetry(options?: Partial<AutoRetryOptions>): Transformer {
                         (signal === undefined || !signal.aborted) &&
                         !rethrowHttpErrors && e instanceof HttpError
                     ) {
+                        if (remainingAttempts <= 0) throw e;
+
+                        remainingAttempts--;
+
                         debug(
                             `HttpError thrown, will retry '${method}' after ${nextDelay} seconds (${e.message})`,
                         );
